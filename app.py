@@ -1,22 +1,22 @@
 import streamlit as st
-from PIL import Image, ImageFilter, ImageOps, ImageStat
+from PIL import Image, ImageFilter, ImageOps, ImageEnhance
 import io
 
-st.set_page_config(page_title="AI Face Studio", page_icon="🎭")
+st.set_page_config(page_title="AI Cartoon Studio", page_icon="🎨")
 
-st.title("🎭 AI Face Studio")
-st.write("Choose a feature and upload an image.")
+st.title("🎨 AI Cartoon & Mask Detection Studio")
+st.write("Upload an image and convert it into cartoon styles or detect face mask.")
 
-# -------- CATEGORY SELECT --------
+# Sidebar menu
 option = st.sidebar.selectbox(
     "Select Feature",
-    ("Cartoon Generator", "Mask Detection", "Beauty Score")
+    ("Classic Cartoon", "Ghibli Style Cartoon", "Mask Detection")
 )
 
-# -------- CARTOON GENERATOR --------
-if option == "Cartoon Generator":
+# -------- CLASSIC CARTOON --------
+if option == "Classic Cartoon":
 
-    st.header("🎨 Cartoon Image Generator")
+    st.header("🎨 Classic Cartoon Generator")
 
     file = st.file_uploader("Upload Image", type=["jpg","png","jpeg"])
 
@@ -26,20 +26,66 @@ if option == "Cartoon Generator":
         st.subheader("Original Image")
         st.image(image, use_column_width=True)
 
-        cartoon = image.filter(ImageFilter.EDGE_ENHANCE_MORE)
-        cartoon = ImageOps.posterize(cartoon, 3)
+        # Edge enhancement
+        edges = image.filter(ImageFilter.FIND_EDGES)
+
+        # Smooth colors
+        smooth = image.filter(ImageFilter.SMOOTH_MORE)
+
+        # Reduce colors
+        poster = ImageOps.posterize(smooth, 3)
+
+        # Blend edges with poster
+        cartoon = Image.blend(poster, edges, 0.2)
 
         st.subheader("Cartoon Result")
         st.image(cartoon, use_column_width=True)
 
+        # Download
         buf = io.BytesIO()
         cartoon.save(buf, format="PNG")
 
         st.download_button(
             "Download Cartoon Image",
             buf.getvalue(),
-            "cartoon.png",
-            "image/png"
+            "cartoon.png"
+        )
+
+# -------- GHIBLI STYLE --------
+elif option == "Ghibli Style Cartoon":
+
+    st.header("🌸 Ghibli Style Cartoon")
+
+    file = st.file_uploader("Upload Image", type=["jpg","png","jpeg"])
+
+    if file:
+        image = Image.open(file).convert("RGB")
+
+        st.subheader("Original Image")
+        st.image(image, use_column_width=True)
+
+        # Soft painting effect
+        smooth = image.filter(ImageFilter.GaussianBlur(1.5))
+
+        # Reduce color palette
+        poster = ImageOps.posterize(smooth, 4)
+
+        # Enhance colors
+        color = ImageEnhance.Color(poster).enhance(1.6)
+
+        # Slight brightness boost
+        ghibli = ImageEnhance.Brightness(color).enhance(1.1)
+
+        st.subheader("Ghibli Style Result")
+        st.image(ghibli, use_column_width=True)
+
+        buf = io.BytesIO()
+        ghibli.save(buf, format="PNG")
+
+        st.download_button(
+            "Download Ghibli Image",
+            buf.getvalue(),
+            "ghibli_style.png"
         )
 
 # -------- MASK DETECTION --------
@@ -68,40 +114,3 @@ elif option == "Mask Detection":
             st.success("Mask Detected ✔")
         else:
             st.error("No Mask Detected ❌")
-
-# -------- BEAUTY SCORE --------
-elif option == "Beauty Score":
-
-    st.header("⭐ Beauty Score Analyzer")
-
-    file = st.file_uploader("Upload Image", type=["jpg","png","jpeg"])
-
-    if file:
-        image = Image.open(file).convert("RGB")
-
-        st.image(image, caption="Uploaded Image", use_column_width=True)
-
-        stat = ImageStat.Stat(image)
-        brightness = sum(stat.mean) / 3
-
-        if brightness > 170:
-            score = 9
-        elif brightness > 140:
-            score = 8
-        elif brightness > 110:
-            score = 7
-        elif brightness > 80:
-            score = 6
-        else:
-            score = 5
-
-        st.subheader(f"Beauty Score: {score}/10")
-
-        st.progress(score/10)
-
-        if score >= 8:
-            st.success("Great Photo Quality!")
-        elif score >= 6:
-            st.info("Good Photo")
-        else:
-            st.warning("Try better lighting or angle")
