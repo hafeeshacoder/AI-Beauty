@@ -1,6 +1,8 @@
-mediapipe==0.10.11
-protobuf==3.20.3
-opencv-python-headless
 streamlit
-Pillow
+opencv-python-headless
+mediapipe
+protobuf==3.20.3
 numpy
+Pillow
+libgl1
+libglib2.0-0
