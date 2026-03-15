@@ -1,15 +1,20 @@
 import streamlit as st
 import cv2
 import numpy as np
-import mediapipe as mp
-# DIRECT IMPORT to fix the Attribute/Name Error
-from mediapipe.python.solutions.face_mesh import FaceMesh
-from PIL import Image
+import PIL.Image as Image
+
+# Safe Import for Mediapipe
+try:
+    import mediapipe as mp
+    from mediapipe.python.solutions.face_mesh import FaceMesh
+except ModuleNotFoundError:
+    st.error("ERROR: Mediapipe not found. Please ensure 'requirements.txt' is in the main folder of your GitHub and contains 'mediapipe'.")
+    st.stop()
 
 st.set_page_config(page_title="AI Beauty Consultant", layout="wide")
 st.title("💄 AI Virtual Makeup Consultant")
 
-# Sidebar
+# --- SIDEBAR ---
 st.sidebar.header("Makeup Palette")
 lp_color = st.sidebar.color_picker("Lipstick Color", "#E91E63")
 lp_intensity = st.sidebar.slider("Lipstick Intensity", 0.0, 1.0, 0.4)
@@ -25,11 +30,12 @@ def apply_makeup(img, points, color_bgr, intensity, blur_size=7):
     mask = np.zeros_like(img)
     points = np.array(points, np.int32)
     cv2.fillPoly(mask, [points], color_bgr)
-    # Syllabus: Smoothing edges via Gaussian Filter
+    # Gaussian Blur for smooth edges
     mask = cv2.GaussianBlur(mask, (blur_size, blur_size), 11)
-    # Syllabus: Merging layers via Alpha Blending
+    # Alpha Blending for natural look
     return cv2.addWeighted(img, 1.0, mask, intensity, 0)
 
+# --- UPLOADER ---
 uploaded_file = st.file_uploader("Upload Portrait", type=["jpg", "png", "jpeg"])
 
 if uploaded_file:
@@ -42,14 +48,14 @@ if uploaded_file:
     img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
     h, w, _ = img_bgr.shape
 
-    # Correct way to initialize the Deep Learning Model
+    # Deep Learning Inference using FaceMesh API
     with FaceMesh(static_image_mode=True, max_num_faces=1, refine_landmarks=True) as face_mesh:
         results = face_mesh.process(img_array)
 
         if results.multi_face_landmarks:
             landmarks = results.multi_face_landmarks[0]
             
-            # Key Landmark Indices
+            # Points for Lips and Cheeks
             LIPS = [61, 146, 91, 181, 84, 17, 314, 405, 273, 287, 410, 322, 391, 308, 307, 375, 0, 267, 269, 270, 409, 291, 306, 292, 415, 310, 311, 312, 13, 82, 81, 42, 183, 78]
             L_CHEEK = [205, 203, 98, 97, 2]
             R_CHEEK = [425, 423, 327, 326, 2]
@@ -57,11 +63,11 @@ if uploaded_file:
             def get_pts(indices):
                 return [(int(landmarks.landmark[i].x * w), int(landmarks.landmark[i].y * h)) for i in indices]
             
-            # Execution Pipeline
+            # Processing Pipeline
             out = apply_makeup(img_bgr, get_pts(LIPS), hex_to_bgr(lp_color), lp_intensity)
             out = apply_makeup(out, get_pts(L_CHEEK), hex_to_bgr(blush_color), blush_intensity, 51)
             out = apply_makeup(out, get_pts(R_CHEEK), hex_to_bgr(blush_color), blush_intensity, 51)
 
             st.image(cv2.cvtColor(out, cv2.COLOR_BGR2RGB), use_container_width=True)
         else:
-            st.warning("No face detected. Try a photo with better lighting.")
+            st.warning("No face detected.")
