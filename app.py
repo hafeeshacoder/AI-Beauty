@@ -4,19 +4,19 @@ import io
 
 st.set_page_config(page_title="AI Cartoon Studio", page_icon="🎨")
 
-st.title("🎨 AI Cartoon & Mask Detection Studio")
-st.write("Upload an image and convert it into cartoon styles or detect face mask.")
+st.title("🎨 AI Cartoon Studio")
+st.write("Upload an image to generate a cartoon version or detect a mask.")
 
 # Sidebar menu
 option = st.sidebar.selectbox(
     "Select Feature",
-    ("Classic Cartoon", "Ghibli Style Cartoon", "Mask Detection")
+    ("Cartoon Generator", "Mask Detection")
 )
 
-# -------- CLASSIC CARTOON --------
-if option == "Classic Cartoon":
+# -------- CARTOON GENERATOR --------
+if option == "Cartoon Generator":
 
-    st.header("🎨 Classic Cartoon Generator")
+    st.header("🎨 Cartoon Image Generator")
 
     file = st.file_uploader("Upload Image", type=["jpg","png","jpeg"])
 
@@ -26,66 +26,33 @@ if option == "Classic Cartoon":
         st.subheader("Original Image")
         st.image(image, use_column_width=True)
 
-        # Edge enhancement
-        edges = image.filter(ImageFilter.FIND_EDGES)
-
-        # Smooth colors
+        # Smooth image
         smooth = image.filter(ImageFilter.SMOOTH_MORE)
 
-        # Reduce colors
+        # Reduce color palette
         poster = ImageOps.posterize(smooth, 3)
 
-        # Blend edges with poster
-        cartoon = Image.blend(poster, edges, 0.2)
+        # Edge detection
+        edges = image.filter(ImageFilter.FIND_EDGES)
+
+        # Blend edges and colors
+        cartoon = Image.blend(poster, edges, 0.25)
+
+        # Enhance colors
+        cartoon = ImageEnhance.Color(cartoon).enhance(1.5)
 
         st.subheader("Cartoon Result")
         st.image(cartoon, use_column_width=True)
 
-        # Download
+        # Download button
         buf = io.BytesIO()
         cartoon.save(buf, format="PNG")
 
         st.download_button(
             "Download Cartoon Image",
             buf.getvalue(),
-            "cartoon.png"
-        )
-
-# -------- GHIBLI STYLE --------
-elif option == "Ghibli Style Cartoon":
-
-    st.header("🌸 Ghibli Style Cartoon")
-
-    file = st.file_uploader("Upload Image", type=["jpg","png","jpeg"])
-
-    if file:
-        image = Image.open(file).convert("RGB")
-
-        st.subheader("Original Image")
-        st.image(image, use_column_width=True)
-
-        # Soft painting effect
-        smooth = image.filter(ImageFilter.GaussianBlur(1.5))
-
-        # Reduce color palette
-        poster = ImageOps.posterize(smooth, 4)
-
-        # Enhance colors
-        color = ImageEnhance.Color(poster).enhance(1.6)
-
-        # Slight brightness boost
-        ghibli = ImageEnhance.Brightness(color).enhance(1.1)
-
-        st.subheader("Ghibli Style Result")
-        st.image(ghibli, use_column_width=True)
-
-        buf = io.BytesIO()
-        ghibli.save(buf, format="PNG")
-
-        st.download_button(
-            "Download Ghibli Image",
-            buf.getvalue(),
-            "ghibli_style.png"
+            "cartoon.png",
+            "image/png"
         )
 
 # -------- MASK DETECTION --------
